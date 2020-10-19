@@ -6,6 +6,9 @@ import lombok.Builder;
 import lombok.NoArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
+import java.io.IOException;
+import java.io.InputStream;
+
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 @Slf4j
 public class SSHClient {
@@ -18,6 +21,7 @@ public class SSHClient {
     private Channel channel = null;
     private ChannelExec channelExec;
     private JSch jSch = new JSch();
+    private InputStream inputStream;
 
     @Builder
     public SSHClient(javax.websocket.Session session) {
@@ -47,11 +51,16 @@ public class SSHClient {
             channelExec = (ChannelExec) channel;
             log.info("[*] exec Channel is created");
 
-        } catch (JSchException e) {
+            // 5. configure sterams
+            inputStream = channel.getInputStream();
+        } catch (JSchException e) { // ssh Exceptions
             log.error("[-] SSHClient Error");
             e.printStackTrace();
             if (channel != null) channel.disconnect();
             if (session != null) session.disconnect();
+        } catch (IOException e) { // stream Exceptions
+            log.error("[-] stream Error");
+            e.printStackTrace();
         }
     }
 
