@@ -40,8 +40,6 @@ public class SSHClient {
             // 3. Connect the ssh server
             session.connect();
             log.info("[*] Session is created");
-
-            session.disconnect();
         } catch (JSchException e) {
             log.error("[-] SSHClient Error");
             e.printStackTrace();
@@ -49,4 +47,10 @@ public class SSHClient {
             session.disconnect();
         }
     }
+
+    public void disconnect(){
+        session.disconnect();
+        log.info("[*] Session is disconnected");
+    }
+
 }

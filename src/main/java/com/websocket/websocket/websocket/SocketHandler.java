@@ -18,6 +18,7 @@ public class SocketHandler {
     private Session session;
     private static Set<SocketHandler> sockets = new CopyOnWriteArraySet<>();
     private static int onlineCount = 0;
+    private SSHClient sshClient;
 
     /***
      * 소켓이 연결될 때
@@ -30,9 +31,9 @@ public class SocketHandler {
         sockets.add(this); // 소켓 추가
         log.info("[*] Socket is connected");
 
-        SSHClient sshClient = SSHClient.builder()
-                .session(session)
-                .build();
+        sshClient = SSHClient.builder()
+            .session(session)
+            .build();
 
         sshClient.connect_to_server();
     }
@@ -53,6 +54,8 @@ public class SocketHandler {
     public void onClose(){
         sockets.remove(this);
         onlineCount--;
+        sshClient.disconnect();
+
         log.info("[*] Socket is disconnected");
     }
 }
