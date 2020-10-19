@@ -1,4 +1,13 @@
 
+# ls 명령어 실행 결과
+![](./imgs/ls%20명령어%20결과.png)
+
+<br>
+
+# 테스트 도구
+* google chrome plugins: ARC
+
+<br>
 
 # 참고자료
 * [1] 중국블로그: https://www.jianshu.com/p/b4ff8dcb8413
