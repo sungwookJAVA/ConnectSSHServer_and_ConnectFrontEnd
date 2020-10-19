@@ -1,9 +1,6 @@
 package com.websocket.websocket.ssh;
 
-import com.jcraft.jsch.Channel;
-import com.jcraft.jsch.JSch;
-import com.jcraft.jsch.JSchException;
-import com.jcraft.jsch.Session;
+import com.jcraft.jsch.*;
 import lombok.AccessLevel;
 import lombok.Builder;
 import lombok.NoArgsConstructor;
@@ -17,8 +14,9 @@ public class SSHClient {
     private final String host = "127.0.0.1";
     private int port = 2222;
     private javax.websocket.Session websocket_session;
-    private Session session;
-    private Channel channel;
+    private Session session = null;
+    private Channel channel = null;
+    private ChannelExec channelExec;
     private JSch jSch = new JSch();
 
     @Builder
@@ -40,17 +38,24 @@ public class SSHClient {
             // 3. Connect the ssh server
             session.connect();
             log.info("[*] Session is created");
+
+            // 4. Create a channel
+            channel = session.openChannel("exec");
+            channelExec = (ChannelExec) channel;
+            log.info("[*] exec Channel is created");
+
         } catch (JSchException e) {
             log.error("[-] SSHClient Error");
             e.printStackTrace();
-
-            session.disconnect();
+            if (channel != null) channel.disconnect();
+            if (session != null) session.disconnect();
         }
     }
 
     public void disconnect(){
-        session.disconnect();
-        log.info("[*] Session is disconnected");
+        if (channel != null) channel.disconnect();
+        if (session != null) session.disconnect();
+        log.info("[*] Session and Channel are disconnected");
     }
 
 }
