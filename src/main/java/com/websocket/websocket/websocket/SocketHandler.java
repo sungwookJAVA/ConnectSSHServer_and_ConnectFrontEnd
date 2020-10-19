@@ -39,12 +39,13 @@ public class SocketHandler {
     }
 
     /***
-     * 클라이어트로부터 메세지를 전달 받을 떄
+     * 클라이언트로부터 전달받은 메세지를 실행
      * @param message
      */
     @OnMessage
     public void onMessage(String message){
-        log.info("[*] onMessage called : " + message);
+        String result = sshClient.ExecCommand(message);
+        log.info("[*] onMessage called : " + result);
     }
 
     /***
