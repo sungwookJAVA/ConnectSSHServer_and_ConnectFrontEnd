@@ -24,6 +24,9 @@ public class SSHClient {
         this.websocket_session = session;
     }
 
+    /***
+     * SSH서버로 연결
+     */
     public void connect_to_server(){
         try {
             // 1. Create a session
@@ -52,10 +55,12 @@ public class SSHClient {
         }
     }
 
+    /***
+     * SSH연결 종료
+     */
     public void disconnect(){
         if (channel != null) channel.disconnect();
         if (session != null) session.disconnect();
         log.info("[*] Session and Channel are disconnected");
     }
-
 }
