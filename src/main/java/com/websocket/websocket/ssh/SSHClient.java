@@ -8,6 +8,7 @@ import lombok.extern.slf4j.Slf4j;
 
 import java.io.IOException;
 import java.io.InputStream;
+import java.util.concurrent.TimeUnit;
 
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 @Slf4j
@@ -62,6 +63,46 @@ public class SSHClient {
             log.error("[-] stream Error");
             e.printStackTrace();
         }
+    }
+
+    /***
+     * 명령어 실행
+     * @param 실행할 명령어
+     * @return 명령어 실행 결과
+     */
+    public String ExecCommand(String command){
+        byte[] buffer = new byte[1024];
+        StringBuffer results = new StringBuffer();
+
+        channelExec.setCommand(command);
+        try {
+            channel.connect();
+
+            while(true){
+                // 입력 스트림 처리
+                while(inputStream.available() > 0){
+                    int readSize = inputStream.read(buffer, 0, 1024);
+                    if (readSize < 0) break;
+                    results.append(new String(buffer, 0, readSize));
+                }
+
+                if(channel.isClosed()){
+                    // 남아 있는 입력, 에러 처리
+                    if((inputStream.available()>0)) continue;
+                    break;
+                }
+                TimeUnit.MILLISECONDS.sleep(100);
+            }
+        } catch (JSchException e) { // jsch errors
+            log.error("[-] exec command error");
+            e.printStackTrace();
+        } catch (IOException e) { // stream erros
+            e.printStackTrace();
+        } catch (InterruptedException e) { // Timeunit error
+            e.printStackTrace();
+        }
+
+        return results.toString();
     }
 
     /***
