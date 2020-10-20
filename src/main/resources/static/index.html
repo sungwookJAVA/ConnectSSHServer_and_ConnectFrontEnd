@@ -21,6 +21,30 @@
     term.writeln('');
     term.prompt();
     term.setOption('cursorBlink', true);
+
+    term.onKey(function (key){
+      var printable = (!key.altKey && !key.altGraphKey && !key.ctrlKey && !key.metaKey);
+      key_code = key.domEvent.keyCode;
+      input_key = key.domEvent.key;
+
+      // key is Enter
+      if(key_code == 13){
+        if( cmd === 'clear'){
+          term.clear();
+        }
+        cmd = '';
+        term.prompt();
+      }else if(key_code == 8){ // key is backspace
+      }else{
+        var key_car = String.fromCharCode(key_code);
+        console.log(key_code);
+        cmd += key_car;
+        term.write(key_car);
+      }
+    });
+
+
+
 </script>
 </body>
 </html>
