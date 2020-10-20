@@ -1,45 +1,31 @@
 package com.websocket.websocket.websocket;
 
-import com.jcraft.jsch.JSchException;
 import com.websocket.websocket.ssh.SSHClient;
-import lombok.extern.java.Log;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
-import javax.websocket.OnClose;
-import javax.websocket.OnMessage;
-import javax.websocket.OnOpen;
-import javax.websocket.Session;
+import org.springframework.web.socket.*;
 import javax.websocket.server.ServerEndpoint;
-import java.io.IOException;
-import java.util.Set;
-import java.util.concurrent.CopyOnWriteArraySet;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
 @Component
 @ServerEndpoint(value = "/sock")
-@Log
-public class SocketHandler {
-    private Session session;
-    private static Set<SocketHandler> sockets = new CopyOnWriteArraySet<>();
-    private static int onlineCount = 0;
-    private SSHClient sshClient;
+@Slf4j
+@RequiredArgsConstructor
+public class SocketHandler implements WebSocketHandler {
+    private final SSHClient sshClient;
     private ExecutorService executorService = Executors.newCachedThreadPool();
 
     /***
-     * 소켓이 연결될 때
+     * 연결을 성공적으로 마친 후 이벤트
      * @param session
+     * @throws Exception
      */
-    @OnOpen
-    public void onOpen(Session session){
-        this.session = session;
-        onlineCount++;
-        sockets.add(this); // 소켓 추가
-        log.info("[*] Socket is connected");
-
-        sshClient = SSHClient.builder()
-            .session(session)
-            .build();
-
+    @Override
+    public void afterConnectionEstablished(WebSocketSession session) throws Exception {
+        log.info("[+] websocket is connected");
+        sshClient.initConnection(session);
 
         executorService.execute(new Runnable() {
             @Override
@@ -50,23 +36,45 @@ public class SocketHandler {
     }
 
     /***
-     * 클라이언트로부터 전달받은 메세지를 실행
+     * 메세지수신 이벤트
+     * @param session
      * @param message
+     * @throws Exception
      */
-    @OnMessage
-    public void onMessage(String message){
-        sshClient.transToSSH(message);
+    @Override
+    public void handleMessage(WebSocketSession session, WebSocketMessage<?> message) throws Exception {
+        log.info("[*] handleMessage is called");
+        if(message instanceof TextMessage){
+            String command = message.getPayload().toString();
+            sshClient.transToSSH(command);
+        }
     }
 
     /***
-     * 연결 종료
+     * 에러발생 이벤트
+     * @param session
+     * @param exception
+     * @throws Exception
      */
-    @OnClose
-    public void onClose(){
-        sockets.remove(this);
-        onlineCount--;
-        sshClient.disconnect();
+    @Override
+    public void handleTransportError(WebSocketSession session, Throwable exception) throws Exception {
+        log.error("[-] websocket occur error");
+    }
 
-        log.info("[*] Socket is disconnected");
+    /***
+     * websocket 연결종료 이벤트
+     * @param session
+     * @param closeStatus
+     * @throws Exception
+     */
+    @Override
+    public void afterConnectionClosed(WebSocketSession session, CloseStatus closeStatus) throws Exception {
+        log.info("[+] websocket is disconnected");
+        sshClient.disconnect();
+    }
+
+    @Override
+    public boolean supportsPartialMessages() {
+        return false;
     }
 }
