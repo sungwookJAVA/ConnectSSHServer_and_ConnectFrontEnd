@@ -8,6 +8,7 @@ import lombok.extern.slf4j.Slf4j;
 
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.OutputStream;
 import java.util.concurrent.TimeUnit;
 
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
@@ -48,12 +49,27 @@ public class SSHClient {
             log.info("[*] Session is created");
 
             // 4. Create a channel
-            channel = session.openChannel("exec");
-            channelExec = (ChannelExec) channel;
+            channel = session.openChannel("shell");
+            channel.connect(3000);
             log.info("[*] exec Channel is created");
 
             // 5. configure sterams
+            channel.setInputStream(null);
             inputStream = channel.getInputStream();
+
+            byte[] buffer = new byte[1024];
+            while(true){
+                while(inputStream.available() > 0){
+                    int readsize = inputStream.read(buffer, 0, 1024);
+                    if(readsize<0) break;
+                    log.info(new String(buffer, 0, readsize));
+                }
+                if(channel.isClosed()){
+                    log.info("[*] 4. Channel is disconnected");
+                    break;
+                }
+                TimeUnit.MILLISECONDS.sleep(100);
+            }
         } catch (JSchException e) { // ssh Exceptions
             log.error("[-] SSHClient Error");
             e.printStackTrace();
@@ -62,47 +78,26 @@ public class SSHClient {
         } catch (IOException e) { // stream Exceptions
             log.error("[-] stream Error");
             e.printStackTrace();
+        } catch (InterruptedException e) {
+            e.printStackTrace();
         }
     }
 
     /***
-     * 명령어 실행
-     * @param 실행할 명령어
-     * @return 명령어 실행 결과
+     * ssh서버에게 실행할 명령어 전달
+     * @param command
      */
-    public String ExecCommand(String command){
-        byte[] buffer = new byte[1024];
-        StringBuffer results = new StringBuffer();
+    public void transToSSH(String command){
+        if (channel != null) {
+            try {
+                OutputStream outputStream = channel.getOutputStream();
+                outputStream.write((command+"\r").getBytes());
+                outputStream.flush();
 
-        channelExec.setCommand(command);
-        try {
-            channel.connect();
-
-            while(true){
-                // 입력 스트림 처리
-                while(inputStream.available() > 0){
-                    int readSize = inputStream.read(buffer, 0, 1024);
-                    if (readSize < 0) break;
-                    results.append(new String(buffer, 0, readSize));
-                }
-
-                if(channel.isClosed()){
-                    // 남아 있는 입력, 에러 처리
-                    if((inputStream.available()>0)) continue;
-                    break;
-                }
-                TimeUnit.MILLISECONDS.sleep(100);
+            } catch (IOException e) {
+                e.printStackTrace();
             }
-        } catch (JSchException e) { // jsch errors
-            log.error("[-] exec command error");
-            e.printStackTrace();
-        } catch (IOException e) { // stream erros
-            e.printStackTrace();
-        } catch (InterruptedException e) { // Timeunit error
-            e.printStackTrace();
         }
-
-        return results.toString();
     }
 
     /***

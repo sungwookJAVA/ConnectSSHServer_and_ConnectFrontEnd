@@ -1,5 +1,6 @@
 package com.websocket.websocket.websocket;
 
+import com.jcraft.jsch.JSchException;
 import com.websocket.websocket.ssh.SSHClient;
 import lombok.extern.java.Log;
 import org.springframework.stereotype.Component;
@@ -8,8 +9,11 @@ import javax.websocket.OnMessage;
 import javax.websocket.OnOpen;
 import javax.websocket.Session;
 import javax.websocket.server.ServerEndpoint;
+import java.io.IOException;
 import java.util.Set;
 import java.util.concurrent.CopyOnWriteArraySet;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 
 @Component
 @ServerEndpoint(value = "/sock")
@@ -19,6 +23,7 @@ public class SocketHandler {
     private static Set<SocketHandler> sockets = new CopyOnWriteArraySet<>();
     private static int onlineCount = 0;
     private SSHClient sshClient;
+    private ExecutorService executorService = Executors.newCachedThreadPool();
 
     /***
      * 소켓이 연결될 때
@@ -35,7 +40,13 @@ public class SocketHandler {
             .session(session)
             .build();
 
-        sshClient.connect_to_server();
+
+        executorService.execute(new Runnable() {
+            @Override
+            public void run() {
+                sshClient.connect_to_server();
+            }
+        });
     }
 
     /***
@@ -44,8 +55,7 @@ public class SocketHandler {
      */
     @OnMessage
     public void onMessage(String message){
-        String result = sshClient.ExecCommand(message);
-        log.info("[*] onMessage called : " + result);
+        sshClient.transToSSH(message);
     }
 
     /***
