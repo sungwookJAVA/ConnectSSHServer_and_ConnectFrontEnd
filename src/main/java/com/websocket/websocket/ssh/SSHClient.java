@@ -2,32 +2,35 @@ package com.websocket.websocket.ssh;
 
 import com.jcraft.jsch.*;
 import lombok.AccessLevel;
-import lombok.Builder;
 import lombok.NoArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-
-import java.io.IOException;
-import java.io.InputStream;
-import java.io.OutputStream;
+import org.springframework.stereotype.Component;
+import org.springframework.web.socket.TextMessage;
+import org.springframework.web.socket.WebSocketSession;
+import java.io.*;
 import java.util.concurrent.TimeUnit;
 
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 @Slf4j
+@Component
 public class SSHClient {
     private final String user = "test";
     private final String password = "toor";
     private final String host = "127.0.0.1";
     private int port = 2222;
-    private javax.websocket.Session websocket_session;
+    private WebSocketSession webSocketSession;
     private Session session = null;
-    private Channel channel = null;
-    private ChannelExec channelExec;
+    private ChannelShell channel = null;
     private JSch jSch = new JSch();
     private InputStream inputStream;
+    PrintStream ps;
 
-    @Builder
-    public SSHClient(javax.websocket.Session session) {
-        this.websocket_session = session;
+    /***
+     * 웹소켓 세션 설정
+     * @param session
+     */
+    public void initConnection(WebSocketSession session){
+        this.webSocketSession = session;
     }
 
     /***
@@ -35,34 +38,34 @@ public class SSHClient {
      */
     public void connect_to_server(){
         try {
-            // 1. Create a session
+            // 1. 세션 생성
             session = jSch.getSession(user, host, port);
             session.setPassword(password);
 
-            // 2. Config a session
+            // 2. 세션 설정
             java.util.Properties config = new java.util.Properties();
             config.put("StrictHostKeyChecking", "no");
             session.setConfig(config);
 
-            // 3. Connect the ssh server
+            // 3. ssh 서버 연결
             session.connect();
             log.info("[*] Session is created");
 
-            // 4. Create a channel
-            channel = session.openChannel("shell");
+            // 4. 채널(shell) 생성과 출력 스트림(서버에게 전달하는 스트림) 설정
+            channel = (ChannelShell) session.openChannel("shell");
+            OutputStream ops = channel.getOutputStream();
+            ps = new PrintStream(ops);
             channel.connect(3000);
             log.info("[*] exec Channel is created");
 
-            // 5. configure sterams
-            channel.setInputStream(null);
+            // 5. 채널 입력 스트림 설정(명령어 결과를 전달 받는 스트림)
             inputStream = channel.getInputStream();
-
-            byte[] buffer = new byte[1024];
+            BufferedReader reader = new BufferedReader(new InputStreamReader(inputStream));
+            String output;
             while(true){
-                while(inputStream.available() > 0){
-                    int readsize = inputStream.read(buffer, 0, 1024);
-                    if(readsize<0) break;
-                    log.info(new String(buffer, 0, readsize));
+                // 결과가 없을 때까지 스트림 복사
+                while((output = reader.readLine()) != null){
+                    webSocketSession.sendMessage(new TextMessage(output));
                 }
                 if(channel.isClosed()){
                     log.info("[*] 4. Channel is disconnected");
@@ -89,14 +92,8 @@ public class SSHClient {
      */
     public void transToSSH(String command){
         if (channel != null) {
-            try {
-                OutputStream outputStream = channel.getOutputStream();
-                outputStream.write((command+"\r").getBytes());
-                outputStream.flush();
-
-            } catch (IOException e) {
-                e.printStackTrace();
-            }
+            ps.println(command);
+            ps.flush();
         }
     }
 
