@@ -59,8 +59,6 @@
         term.write('\b \b');
         cmd = cmd.slice(0, -1);
       }else if(printable){
-        console.log(key);
-        // var key_car = String.fromCharCode(key_code);
         cmd += key.key;
         term.write(key.key);
       }
