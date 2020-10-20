@@ -8,6 +8,7 @@
 <div id="terminal"></div>
 
 <script>
+    var url = "ws://127.0.0.1:8080/sock"
     var shellprompt = '$ ';
     var cmd = '';
 
@@ -19,8 +20,24 @@
 
     term.writeln('Welcome to CKA');
     term.writeln('');
-    term.prompt();
+    // term.prompt();
     term.setOption('cursorBlink', true);
+
+    var websocket = new WebSocket(url);
+    websocket.onopen = function(e) {
+      websocket.send("whoami");
+    }
+    websocket.onmessage = function(e) {
+      var regex_result = e.data.match(/(^[a-z][-a-z0-9]*)@(.*):~\$$/);
+      if(regex_result){
+        term.write(e.data);
+      }else{
+        term.writeln(e.data);
+      }
+    }
+    websocket.onerror = function(e){
+      alert("error");
+    }    
 
     term.onKey(function (key){
       var printable = (!key.altKey && !key.altGraphKey && !key.ctrlKey && !key.metaKey);
@@ -31,15 +48,21 @@
       if(key_code == 13){
         if( cmd === 'clear'){
           term.clear();
+          cmd = '';
+          term.prompt();
+        }        
+        else{
+          websocket.send(cmd);
+          cmd = '';
         }
-        cmd = '';
-        term.prompt();
       }else if(key_code == 8){ // key is backspace
-      }else{
-        var key_car = String.fromCharCode(key_code);
-        console.log(key_code);
-        cmd += key_car;
-        term.write(key_car);
+        term.write('\b \b');
+        cmd = cmd.slice(0, -1);
+      }else if(printable){
+        console.log(key);
+        // var key_car = String.fromCharCode(key_code);
+        cmd += key.key;
+        term.write(key.key);
       }
     });
 
