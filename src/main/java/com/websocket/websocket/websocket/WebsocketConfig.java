@@ -1,13 +1,23 @@
 package com.websocket.websocket.websocket;
 
-import org.springframework.context.annotation.Bean;
+import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Configuration;
-import org.springframework.web.socket.server.standard.ServerEndpointExporter;
+import org.springframework.web.socket.config.annotation.EnableWebSocket;
+import org.springframework.web.socket.config.annotation.WebSocketConfigurer;
+import org.springframework.web.socket.config.annotation.WebSocketHandlerRegistry;
 
+/***
+ * 스프링부트 웹소켓 사용 활성화
+ */
 @Configuration
-public class WebsocketConfig {
-    @Bean
-    public ServerEndpointExporter serverEndpointExporter() {
-        return new ServerEndpointExporter();
+@EnableWebSocket
+@RequiredArgsConstructor
+public class WebsocketConfig implements WebSocketConfigurer {
+    private final SocketHandler socketHandler;
+
+    @Override
+    public void registerWebSocketHandlers(WebSocketHandlerRegistry registry) {
+        registry.addHandler(socketHandler, "/sock")
+                .setAllowedOrigins("*");
     }
 }
