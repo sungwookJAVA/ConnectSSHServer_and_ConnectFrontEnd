@@ -24,6 +24,7 @@ public class SSHClient {
     private JSch jSch = new JSch();
     private InputStream inputStream;
     PrintStream ps;
+    private int response_standard = 0;
 
     /***
      * 웹소켓 세션 설정
@@ -62,16 +63,14 @@ public class SSHClient {
             inputStream = channel.getInputStream();
             BufferedReader reader = new BufferedReader(new InputStreamReader(inputStream));
             String output;
-            while(true){
-                // 결과가 없을 때까지 스트림 복사
-                while((output = reader.readLine()) != null){
-                    webSocketSession.sendMessage(new TextMessage(output));
-                }
-                if(channel.isClosed()){
-                    log.info("[*] 4. Channel is disconnected");
-                    break;
-                }
-                TimeUnit.MILLISECONDS.sleep(100);
+            int rows = 0;
+
+            while((output = reader.readLine()) != null){
+                // 첫 번째 전달값은 무시
+                log.info("rows: " + response_standard);
+                if(rows++ == 0) continue;
+                else if(rows% response_standard == 0) rows = 0;
+                webSocketSession.sendMessage(new TextMessage(output));
             }
         } catch (JSchException e) { // ssh Exceptions
             log.error("[-] SSHClient Error");
@@ -81,8 +80,10 @@ public class SSHClient {
         } catch (IOException e) { // stream Exceptions
             log.error("[-] stream Error");
             e.printStackTrace();
-        } catch (InterruptedException e) {
-            e.printStackTrace();
+        } finally {
+            // gracefully disconnection
+            channel.disconnect();
+            session.disconnect();
         }
     }
 
@@ -92,6 +93,11 @@ public class SSHClient {
      */
     public void transToSSH(String command){
         if (channel != null) {
+            // 클라이언트에게 전달할 명령어 수 설정(n-1)            
+            if(command.isEmpty()) // 전달받은 명령어가 엔터
+                response_standard = 2;
+            else
+               response_standard = 3;
             ps.println(command);
             ps.flush();
         }

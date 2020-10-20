@@ -43,7 +43,6 @@ public class SocketHandler implements WebSocketHandler {
      */
     @Override
     public void handleMessage(WebSocketSession session, WebSocketMessage<?> message) throws Exception {
-        log.info("[*] handleMessage is called");
         if(message instanceof TextMessage){
             String command = message.getPayload().toString();
             sshClient.transToSSH(command);
